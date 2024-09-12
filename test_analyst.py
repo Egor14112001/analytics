@@ -1,9 +1,9 @@
 import pandas as pd
 
 # считываем листы с excel файла
-df_24_12 = pd.read_excel("Задание аналитик Тест_подведение итогов акции дек23.xlsx", sheet_name='24.12')
-df_17_12 = pd.read_excel("Задание аналитик Тест_подведение итогов акции дек23.xlsx", sheet_name='17.12')
-df_spr = pd.read_excel("Задание аналитик Тест_подведение итогов акции дек23.xlsx", sheet_name='Справка')
+df_24_12 = pd.read_excel("D://Загрузки2//Задание аналитик Тест_подведение итогов акции дек23.xlsx", sheet_name='24.12')
+df_17_12 = pd.read_excel("D://Загрузки2//Задание аналитик Тест_подведение итогов акции дек23.xlsx", sheet_name='17.12')
+df_spr = pd.read_excel("D://Загрузки2//Задание аналитик Тест_подведение итогов акции дек23.xlsx", sheet_name='Справка')
 # Для удобства переименовываем название столбца
 df_spr = df_spr.rename(columns={"Тип магазина ":"type_shop"})
 # Отбираем только те магизны, которые находятся в ТЦ
@@ -11,9 +11,9 @@ df_spr = df_spr.query('type_shop == "ТЦ"')
 # Объединяем магазины по Id и Названию Магазина 
 df_17_12_merge = df_17_12.merge(df_spr, how = 'inner', on=['Id','Магазин'])
 df_24_12_merge = df_24_12.merge(df_spr, how = 'inner', on=['Id','Магазин'])
-# Убираем пустые ячейки
-df_24_12_merge = df_24_12_merge.fillna(0)
-df_17_12_merge = df_17_12_merge.fillna(0)
+# Убираем строки с пустыми ячейками
+df_24_12_merge = df_24_12_merge.dropna()
+df_17_12_merge = df_17_12_merge.dropna()
 # Меняем тип данных столбцов, Кол-во чеков,Кол-во посетителей которые изначально были float
 df_24_12_merge[['Кол-во чеков','Кол-во посетителей']] = df_24_12_merge[['Кол-во чеков','Кол-во посетителей']].astype('int32')
 df_17_12_merge[['Кол-во чеков','Кол-во посетителей']] = df_17_12_merge[['Кол-во чеков','Кол-во посетителей']].astype('int32')
@@ -66,6 +66,11 @@ df_shop_fault['Кол-во чеков'] = df_shop_fault['Кол-во чеков_
 df_shop_fault['Кол-во посетителей'] = df_shop_fault['Кол-во посетителей_x']/df_shop_fault['Кол-во посетителей_y']
 df_shop_fault = df_shop_fault[['Выручка',  'Кол-во чеков',  'Кол-во посетителей']]*100 -100
 df_shop_fault = df_shop_fault.reset_index()
-# формируем excel файл
-df_shop_fault.sort_values(['Выручка', 'Кол-во чеков',  'Кол-во посетителей'], ascending=True).query('Выручка < 0 ')[['Id', 'Магазин', 'Выручка', 'Кол-во чеков',  'Кол-во посетителей']].to_excel('shop_fault.xlsx', index=False)
-
+# формируем excel файл с 3-мя листами
+df_shop_fault_revenue = df_shop_fault.sort_values(['Выручка'])[df_shop_fault['Выручка'] < 0][['Id', 'Магазин', 'Выручка']]
+df_shop_fault_check = df_shop_fault.sort_values(['Кол-во чеков'])[df_shop_fault['Кол-во чеков'] < 0][['Id', 'Магазин', 'Кол-во чеков']]
+df_shop_fault_visitors = df_shop_fault.sort_values(['Кол-во посетителей'])[df_shop_fault['Кол-во посетителей'] < 0][['Id', 'Магазин', 'Кол-во посетителей']]
+with pd.ExcelWriter('shop_fault.xlsx') as writer:
+    df_shop_fault_revenue.to_excel(writer, sheet_name='Выручка', index=False)
+    df_shop_fault_check.to_excel(writer, sheet_name='Кол-во чеков', index=False)
+    df_shop_fault_visitors.to_excel(writer, sheet_name='Кол-во посетителей', index=False)
